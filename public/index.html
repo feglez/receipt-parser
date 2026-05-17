@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Receipt Parser MVP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom drag-and-drop active state - High Contrast */
+        .drag-active {
+            border-color: #000000; /* Deep Black */
+            background-color: #f9fafb; /* Tailwind gray-50 */
+        }
+        /* Devil animation */
+        @keyframes devilPulse {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.2) rotate(10deg); }
+        }
+        .animate-devil {
+            display: inline-block;
+            animation: devilPulse 1.5s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans text-gray-800 min-h-screen flex flex-col">
+
+    <!-- Header - DualEntry Style -->
+    <header class="bg-gray-900 text-white p-4 border-b border-gray-800 shadow-md">
+        <div class="max-w-5xl mx-auto flex items-center gap-2">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            <h1 class="text-2xl font-bold tracking-tight">ReceiptParser<span class="text-gray-400 font-normal">MVP</span></h1>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-4xl w-full mx-auto p-6 mt-8">
+        
+        <!-- Main Form Container -->
+        <div class="bg-white rounded-lg shadow-lg p-8">
+            <h2 class="text-3xl font-semibold text-center mb-2">Analyze a Receipt</h2>
+            <p class="text-center text-gray-500 mb-8">Upload a ticket to instantly extract structured financial data.</p>
+
+            <form id="uploadForm">
+                
+                <!-- Drop Zone -->
+                <div id="dropZone" class="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center transition-colors cursor-pointer hover:bg-gray-50 mb-4">
+                    <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    <p class="text-lg font-medium text-gray-800">Choose a file or drag it here</p>
+                    <p class="text-sm text-gray-400 mt-1" id="fileNameDisplay">Supports PNG, JPG, WEBP</p>
+                    <input type="file" id="fileInput" name="receipt" class="hidden" accept="image/*" required>
+                </div>
+
+                <!-- Example Ticket Link -->
+                <div class="text-center mb-6">
+                    <span class="text-sm text-gray-500">Don't have one?</span>
+                    <button type="button" id="loadExampleBtn" class="text-sm text-black font-semibold hover:underline ml-1 transition-colors">Try our example ticket</button>
+                </div>
+
+                <!-- Image Preview Container (Hidden by default) -->
+                <div id="previewContainer" class="hidden mb-6 border border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex justify-center relative">
+                    <img id="formReceiptPreview" class="object-contain max-h-72 w-full" src="" alt="Receipt Preview">
+                    <button type="button" id="clearPreviewBtn" class="absolute top-2 right-2 bg-black text-white rounded-md p-1.5 hover:bg-gray-800 shadow-sm transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+
+                <!-- Custom Prompt Input -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Custom Instruction Prompt</label>
+                    <textarea id="promptInput" rows="3" class="w-full border border-gray-300 rounded-md p-3 focus:ring-2 focus:ring-gray-800 focus:outline-none">Analyze this receipt carefully and extract the data.</textarea>
+                </div>
+
+                <!-- Security / Password Input -->
+                <div class="mb-6 border-t border-gray-200 pt-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <svg class="w-4 h-4 inline-block mr-1 mb-0.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                        Access Password <span class="text-red-500">*</span>
+                    </label>
+                    <input type="password" id="passwordInput" required class="w-full border border-gray-300 rounded-md p-3 focus:ring-2 focus:ring-gray-800 focus:outline-none" placeholder="Enter your secret key">
+                </div>
+
+                <button type="submit" class="w-full bg-black hover:bg-gray-800 text-white font-bold py-3 px-4 rounded-lg transition duration-200 text-lg shadow-sm">
+                    Analyze Ticket
+                </button>
+            </form>
+        </div>
+
+        <!-- Loading Animation (Hidden by default) -->
+        <div id="loading" class="hidden mt-16 text-center">
+            <div class="text-7xl animate-devil">😈</div>
+            <p class="mt-6 text-2xl font-bold tracking-wider text-gray-800">NetSuite, we are coming</p>
+            <p class="text-gray-500 mt-2 animate-pulse">Running VLM analysis...</p>
+        </div>
+
+        <!-- Results Display (Hidden by default) -->
+        <div id="results" class="hidden mt-12 bg-white rounded-lg shadow-lg overflow-hidden">
+            <div class="bg-gray-900 text-white p-4 border-b border-gray-800">
+                <h3 class="text-lg font-bold tracking-tight">Extraction Results</h3>
+            </div>
+            
+            <div class="p-6">
+                
+                <!-- Final Result Image Preview -->
+                <div class="mb-6 border rounded-lg overflow-hidden bg-gray-50 flex justify-center max-h-64">
+                    <img id="receiptPreview" class="object-contain max-h-full" src="" alt="Analyzed Receipt">
+                </div>
+
+                <!-- Summary Grid -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 text-sm">
+                    <div class="bg-gray-50 p-4 rounded-md border border-gray-200">
+                        <p class="text-gray-500 uppercase text-xs font-bold mb-1">Store Name</p>
+                        <p class="font-semibold text-lg text-gray-900" id="resStore">-</p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-md border border-gray-200">
+                        <p class="text-gray-500 uppercase text-xs font-bold mb-1">Date & Time</p>
+                        <p class="font-semibold text-lg text-gray-900" id="resDate">-</p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-md border border-gray-200">
+                        <p class="text-gray-500 uppercase text-xs font-bold mb-1">Total Amount</p>
+                        <p class="font-semibold text-lg text-gray-900" id="resTotal">-</p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-md border border-gray-200">
+                        <p class="text-gray-500 uppercase text-xs font-bold mb-1">Tax</p>
+                        <p class="font-semibold text-lg text-gray-900" id="resTax">-</p>
+                    </div>
+                </div>
+
+                <!-- Items Table -->
+                <h4 class="font-bold text-gray-800 mb-3 border-b pb-2">Line Items</h4>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-left text-sm whitespace-nowrap">
+                        <thead class="uppercase tracking-wider border-b-2 border-gray-200 bg-gray-50 text-gray-600">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 font-semibold">Description</th>
+                                <th scope="col" class="px-6 py-3 font-semibold">Qty</th>
+                                <th scope="col" class="px-6 py-3 text-right font-semibold">Price</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resItems" class="divide-y divide-gray-200">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const uploadForm = document.getElementById('uploadForm');
+        
+        const previewContainer = document.getElementById('previewContainer');
+        const formReceiptPreview = document.getElementById('formReceiptPreview');
+        const clearPreviewBtn = document.getElementById('clearPreviewBtn');
+        const loadExampleBtn = document.getElementById('loadExampleBtn');
+        const finalReceiptPreview = document.getElementById('receiptPreview');
+
+        const loadingDiv = document.getElementById('loading');
+        const resultsDiv = document.getElementById('results');
+
+        // --- Helper Functions ---
+        function showPreview(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                formReceiptPreview.src = e.target.result;
+                finalReceiptPreview.src = e.target.result; // Stage it for the results page too
+                previewContainer.classList.remove('hidden');
+                dropZone.classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearPreview() {
+            fileInput.value = "";
+            fileNameDisplay.textContent = "Supports PNG, JPG, WEBP";
+            fileNameDisplay.classList.remove('text-black', 'font-bold');
+            previewContainer.classList.add('hidden');
+            dropZone.classList.remove('hidden');
+        }
+
+        // --- Event Listeners ---
+        clearPreviewBtn.addEventListener('click', clearPreview);
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-active');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-active');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-active');
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                fileNameDisplay.textContent = e.dataTransfer.files[0].name;
+                fileNameDisplay.classList.add('text-black', 'font-bold');
+                showPreview(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length) {
+                const file = fileInput.files[0];
+                fileNameDisplay.textContent = file.name;
+                fileNameDisplay.classList.add('text-black', 'font-bold');
+                showPreview(file);
+            }
+        });
+
+        // --- Load Example Ticket Logic ---
+        loadExampleBtn.addEventListener('click', async () => {
+            const originalText = loadExampleBtn.textContent;
+            loadExampleBtn.textContent = "Loading...";
+            
+            try {
+                // Fetch a sample receipt
+                const exampleUrl = '/example-receipt.jpg';
+                const response = await fetch(exampleUrl);
+                const blob = await response.blob();
+                
+                const file = new File([blob], "example-swiss-receipt.jpg", { type: blob.type });
+                
+                // Load into File Input
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                fileInput.files = dataTransfer.files;
+                
+                fileNameDisplay.textContent = "example-swiss-receipt.jpg";
+                fileNameDisplay.classList.add('text-black', 'font-bold');
+                showPreview(file);
+                
+            } catch (err) {
+                console.error("Failed to load example", err);
+                alert("Couldn't load the example ticket. Please upload one manually.");
+            } finally {
+                loadExampleBtn.textContent = originalText;
+            }
+        });
+
+        // --- Form Submission Logic ---
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!fileInput.files.length) {
+                alert("Please select a file first.");
+                return;
+            }
+
+            // UI State updates
+            uploadForm.classList.add('hidden');
+            resultsDiv.classList.add('hidden');
+            loadingDiv.classList.remove('hidden');
+
+            const formData = new FormData();
+            formData.append('receipt', fileInput.files[0]);
+            
+            const promptVal = document.getElementById('promptInput').value.trim();
+            if (promptVal) {
+                formData.append('prompt', promptVal);
+            }
+            
+            const passwordVal = document.getElementById('passwordInput').value;
+            formData.append('password', passwordVal);
+
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+            if (response.status === 401) {
+                throw new Error("INCORRECT_PASSWORD");
+            }
+
+            if (!response.ok) throw new Error("API_FAILED");
+
+            const data = await response.json();
+                
+                // Populate Results UI
+                document.getElementById('resStore').textContent = data.store_name || 'N/A';
+                document.getElementById('resDate').textContent = `${data.date || ''} ${data.time || ''}`.trim() || 'N/A';
+                document.getElementById('resTotal').textContent = `${data.total_amount !== null ? data.total_amount : '0'} ${data.currency || ''}`;
+                document.getElementById('resTax').textContent = `${data.tax_amount !== null ? data.tax_amount : '0'} ${data.currency || ''}`;
+
+                const tbody = document.getElementById('resItems');
+                tbody.innerHTML = ''; // Clear previous
+                
+                if (data.items && data.items.length > 0) {
+                    data.items.forEach(item => {
+                        const price = item.price !== null && item.price !== undefined ? item.price.toFixed(2) : 'N/A';
+                        const currency = data.currency || '';
+                        
+                        tbody.innerHTML += `
+                            <tr class="hover:bg-gray-100 transition duration-150">
+                                <td class="px-6 py-4 border-b font-medium text-gray-800">${item.description || 'Unknown Item'}</td>
+                                <td class="px-6 py-4 border-b text-gray-600">${item.quantity || 1}</td>
+                                <td class="px-6 py-4 border-b text-right font-semibold text-gray-800">${price} ${currency}</td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="3" class="px-6 py-4 text-center text-gray-500 italic">No line items detected</td></tr>`;
+                }
+
+                // UI State updates
+                loadingDiv.classList.add('hidden');
+                uploadForm.classList.remove('hidden'); 
+                resultsDiv.classList.remove('hidden');
+                
+                // Smooth Auto-scroll to results
+                resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                // Reset file input for next time
+                clearPreview();
+
+            } catch (err) {
+                console.error(err);
+                if (err.message === "INCORRECT_PASSWORD") {
+                    alert("🔒 Access Denied: The password you entered is incorrect.");
+                    document.getElementById('passwordInput').value = ""; // Clear the wrong password
+                    document.getElementById('passwordInput').focus();
+                } else {
+                    alert("Error analyzing the receipt.");
+                }
+                loadingDiv.classList.add('hidden');
+                uploadForm.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

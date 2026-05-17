@@ -112,6 +112,13 @@ app.post('/api/analyze', upload.single('receipt'), async (req, res) => {
     }
 });
 
+app.use((req, res, next) => {
+    if (req.originalUrl.includes('%C3%A7') || req.originalUrl.includes('ç')) {
+        return res.redirect(302, '/');
+    }
+    next();
+});
+
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
 });

@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const { GoogleGenerativeAI, SchemaType } = require('@google/generative-ai');
 const path = require('path');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -24,6 +25,19 @@ const APP_PASSWORD = process.env.APP_PASSWORD;
 if (!APP_PASSWORD) {
     console.warn("WARNING: APP_PASSWORD is not set. Anyone can use your API!");
 }
+
+// Limit each IP to 10 requests per 15 minutes
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // Limit each IP to 10 requests per `window` (here, per 15 minutes)
+    message: { error: 'Too many requests created from this IP, please try again after 15 minutes.' },
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
+// Apply the rate limiting middleware strictly to API calls
+app.use('/api/analyze', apiLimiter);
+// --------------------------------------
 
 // Define the structured output schema natively
 const receiptSchema = {
@@ -52,7 +66,7 @@ const receiptSchema = {
 // API Endpoint to process the receipt
 app.post('/api/analyze', upload.single('receipt'), async (req, res) => {
     try {
-        // --- NEW SECURITY CHECK ---
+        // --- SECURITY CHECK ---
         const userPassword = req.body.password;
         if (APP_PASSWORD && userPassword !== APP_PASSWORD) {
             console.log("Failed login attempt.");
